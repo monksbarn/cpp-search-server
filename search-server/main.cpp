@@ -77,9 +77,9 @@ public:
     {
         ++document_count_;
         const vector<string> words = SplitIntoWordsNoStop(document);
+        double freqs = 1.0 / words.size();
         for (const string &w : words)
         {
-            double freqs = 1.0 / words.size();
             // word_to_document_freqs_[w].[document_id] += freqs; конструкция с точкой между квадратными скобкани  не компилируется
             // могли бы уточнить, почему?
             word_to_document_freqs_[w][document_id] += freqs;
@@ -146,12 +146,6 @@ private:
 
     Query ParseQuery(const string &text) const
     {
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // стоит организовать отдельный метод по обработке отдельных слов запроса
-        // и возврата характеристик в структурированном виде - сам слова и его признаки (стоп и минус)
-        //
-        // здесь не понял, что именно нужно изменить?
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         Query query;
         for (const string &word : SplitIntoWordsNoStop(text))
         {
@@ -165,9 +159,9 @@ private:
     // поиск всех соответствующих поисковому запросу документов,
     // вычисление релевантности документа запросу,
     // исключение документов, содержащих минус-слова
-    double getIDF(const string &word) const
+    double calculateIDF(const string &word) const
     {
-        return log((double)document_count_ / word_to_document_freqs_.at(word).size());
+        return log(static_cast<double>(document_count_) / word_to_document_freqs_.at(word).size());
     }
     vector<Document> FindAllDocuments(const Query &query_words) const
     {
@@ -179,36 +173,36 @@ private:
         // вычисляется TF каждого слова запроса в документе  в методе AddDocument(),
         // IDF каждого слова запроса умножается на TF этого слова в этом документе,
         // все произведения IDF и TF в документе суммируются.
-        for (const string &q : query_words.plus_words)
+        for (const string &query_word : query_words.plus_words)
         {
-            if (word_to_document_freqs_.find(q) == word_to_document_freqs_.end())
+            if (word_to_document_freqs_.find(query_word) == word_to_document_freqs_.end())
                 continue;
-            double IDF = getIDF(q);
+            double IDF = calculateIDF(query_word);
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             // стоит использовать декомпозиция переменной,чтобы не работать с id.first и id.second. Декомпозицию делают через const auto& [var1, var2]
             //
             // for (const auto & [var1,var2]: word_to_document_freqs_.at(q)) не компилируется (identifier var1 is undefined)
             // возможно, я что-то неправильно пишу... версия моего компилятора может не поддержитвать такую конструкцию?
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            for (const auto &id : word_to_document_freqs_.at(q))
+            for (const auto &[id,TF] : word_to_document_freqs_.at(query_word))
             {
-                relevanceDoc[id.first] += id.second * IDF;
+                relevanceDoc[id] += TF * IDF;
             }
         }
         // удаление минус-слов
-        for (const string &sWord : query_words.minus_words)
+        for (const string &minus_word : query_words.minus_words)
         {
-            if (word_to_document_freqs_.find(sWord) == word_to_document_freqs_.end())
+            if (word_to_document_freqs_.find(minus_word) == word_to_document_freqs_.end())
                 continue;
-            for (const auto &id : word_to_document_freqs_.at(sWord))
+            for (const auto &[id,TF] : word_to_document_freqs_.at(minus_word))
             {
-                relevanceDoc.erase(id.first);
+                relevanceDoc.erase(id);
             }
         }
         // копирование данных из контейнера map в вектор
-        for (const auto &id : relevanceDoc)
+        for (const auto &[id,relevance] : relevanceDoc)
         {
-            matched_documents.push_back({id.first, id.second});
+            matched_documents.push_back({id, relevance});
         }
         return matched_documents;
     }
@@ -241,4 +235,10 @@ int main()
     }
     return 0;
 }
+/* is are was a an in the with near at
+3
+a colorful parrot with green wings and red tail is lost
+a grey hound with black ears is found at the railway station
+a white cat with long furry tail is found near the red square
+white cat long tail */
 
