@@ -28,13 +28,10 @@ int ReadLineWithNumber()
     return result;
 }
 // проверка на наличие специальных символов char от 0 до 31 включительно
-bool IsInvalidCharacters(const string &text)
+bool IsInvalidCharacter(const char character)
 {
-    for (const char c : text)
-    {
-        if (c >= 0 && c < 32)
-            return true;
-    }
+    if (character >= 0 && character < 32)
+        return true;
     return false;
 }
 // разбиение строки на вектор слов
@@ -44,6 +41,8 @@ vector<string> SplitIntoWords(const string &text)
     string word;
     for (const char c : text)
     {
+        if (IsInvalidCharacter(c))
+            throw invalid_argument("unreadable characters in the text");
         if (c == ' ')
         {
             if (!word.empty())
@@ -87,6 +86,11 @@ set<string> MakeUniqueNonEmptyStrings(const StringContainer &strings)
     {
         if (!str.empty())
         {
+            for (const char c : str)
+            {
+                if (IsInvalidCharacter(c))
+                    throw invalid_argument("unreadable characters in the stop-words");
+            }
             non_empty_strings.insert(str);
         }
     }
@@ -109,11 +113,6 @@ public:
     explicit SearchServer(const StringContainer &stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
     {
-        for (const string &stop_word : stop_words)
-        {
-            if (IsInvalidCharacters(stop_word))
-                throw invalid_argument("there are invalid characters in the stop-words");
-        }
     }
     // конструктор, задает стоп слова, переданные в строке
     explicit SearchServer(const string &stop_words_text)
@@ -124,8 +123,8 @@ public:
     // шняга, неизвестного назначения
     int GetDocumentId(int index) const
     {
-        if (index < 0 || index > (GetDocumentCount() - 1))
-            throw out_of_range("index out of range");
+        //if(index < 0 || index > (GetDocumentCount() - 1))
+        //   throw out_of_range("the index out of range");
         vector<int> doc_id;
         for (const auto &[id, data] : documents_)
         {
@@ -140,9 +139,7 @@ public:
         // если id меньше нуля или id уже есть среди добавленных документов или переданная
         // строка содрежит спецсимволы, вернуть false
         if (document_id < 0)
-            throw invalid_argument("id cannot be negative");
-        if (IsInvalidCharacters(document))
-            throw invalid_argument("there are invalid characters in the document");
+            throw invalid_argument("ID cannot be negative");
         if (documents_.count(document_id))
             throw invalid_argument("this ID already exists");
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -157,12 +154,8 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string &raw_query, DocumentPredicate document_predicate) const
     {
-        if (IsInvalidCharacters(raw_query))
-            throw invalid_argument("there are invalid characters in the request");
-        const pair<Query, bool> query = ParseQuery(raw_query);
-        if (!query.second)
-            throw invalid_argument("it is not allowed to use \"--someword\" or \"-\" in the request.\nCorrectly: \"-someword\"");
-        auto matched_documents = FindAllDocuments(query.first, document_predicate);
+        Query query = ParseQuery(raw_query);
+        auto matched_documents = FindAllDocuments(query, document_predicate);
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document &lhs, const Document &rhs)
              {
@@ -196,13 +189,9 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string &raw_query, int document_id) const
     {
-        if (IsInvalidCharacters(raw_query))
-            throw invalid_argument("there are invalid characters in the request");
-        const pair<Query, bool> query = ParseQuery(raw_query);
-        if (!query.second)
-            throw invalid_argument("it is not allowed to use \"--someword\" or \"-\" in the request.\nCorrectly: \"-someword\"");
+        Query query = ParseQuery(raw_query);
         vector<string> matched_words;
-        for (const string &word : query.first.plus_words)
+        for (const string &word : query.plus_words)
         {
             if (word_to_document_freqs_.count(word) == 0)
             {
@@ -213,7 +202,7 @@ public:
                 matched_words.push_back(word);
             }
         }
-        for (const string &word : query.first.minus_words)
+        for (const string &word : query.minus_words)
         {
             if (word_to_document_freqs_.count(word) == 0)
             {
@@ -228,24 +217,24 @@ public:
         return tuple{matched_words, documents_.at(document_id).status};
     }
 
-    //получить количество документов
+    // получить количество документов
     int GetDocumentCount() const
     {
         return documents_.size();
     }
-    
+
 private:
-    //структура, содержит средний райтинг докумета и его статус
+    // структура, содержит средний райтинг докумета и его статус
     struct DocumentData
     {
         int rating;
         DocumentStatus status;
     };
-    //сет из стоп слов
+    // сет из стоп слов
     const set<string> stop_words_;
-    //мэп: ключ - слово из документа, значение - мэп: ключ - id документа, значение TF для слова
+    // мэп: ключ - слово из документа, значение - мэп: ключ - id документа, значение TF для слова
     map<string, map<int, double>> word_to_document_freqs_;
-    //мэп: ключ - id документа, значение - структура из рейтинга и статуса документа
+    // мэп: ключ - id документа, значение - структура из рейтинга и статуса документа
     map<int, DocumentData> documents_;
     // определить принадлежность слова к списку стоп-слов
     bool IsStopWord(const string &word) const
@@ -299,25 +288,21 @@ private:
         }
         return {text, is_minus, IsStopWord(text)};
     }
-    //структура двух сетов из плюс слов и минус слов
+    // структура двух сетов из плюс слов и минус слов
     struct Query
     {
         set<string> plus_words;
         set<string> minus_words;
     };
 
-    pair<Query, bool> ParseQuery(const string &text) const
+    Query ParseQuery(const string &text) const
     {
         Query query;
         for (const string &word : SplitIntoWords(text))
         {
             const QueryWord query_word = ParseQueryWord(word);
             if (query_word.data.empty() || query_word.data.front() == '-')
-            {
-                query.minus_words.clear();
-                query.plus_words.clear();
-                return make_pair(query, false);
-            }
+                throw invalid_argument("it is not allowed to use \"--word\" or only \"-\" in the request.\nCorrectly: \"-word\"");
             if (!query_word.is_stop)
             {
                 if (query_word.is_minus)
@@ -330,7 +315,7 @@ private:
                 }
             }
         }
-        return make_pair(query, true);
+        return query;
     }
 
     // Existence required
@@ -399,17 +384,19 @@ int main()
         search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, {7, 2, 7});
         search_server.AddDocument(2, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, {1, 2});
         search_server.AddDocument(0, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, {1, 2});
-        search_server.AddDocument(3, "большой пёс-скворец"s, DocumentStatus::ACTUAL, {1, 3, 2});
-        for(const Document& document:search_server.FindTopDocuments("пушистый пёс-скворец"s)){
-             PrintDocument(document);
+        search_server.AddDocument(3, "большой пёс скворец"s, DocumentStatus::ACTUAL, {1, 3, 2});
+        for (const Document &document : search_server.FindTopDocuments("пушистый пёс -скворец"s))
+        {
+            PrintDocument(document);
         }
-        cout << search_server.GetDocumentId(0) << endl;
+        cout << search_server.GetDocumentId(90) << endl;
     }
     catch (const invalid_argument &error)
     {
         cout << "Error: " << error.what() << endl;
     }
-    catch(const out_of_range& error){
+    catch (const out_of_range &error)
+    {
         cout << "Error: " << error.what() << endl;
     }
     return 0;
