@@ -1,0 +1,65 @@
+#pragma once
+#include <vector>
+#include <deque>
+#include <string>
+#include "search_server.h"
+#include "document.h"
+
+class RequestQueue {
+public:
+    explicit RequestQueue(const SearchServer& search_server);
+    template <typename DocumentPredicate>
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
+        if (time_count_++ > min_in_day_) {
+            requests_.pop_front();
+            --empty_requests_;
+        }
+        QueryResult tmp;
+        tmp.request = search_server_.FindTopDocuments(raw_query, document_predicate);
+        tmp.time_request = time_count_;
+        requests_.push_back(tmp);
+        if (tmp.request.empty())
+            empty_requests_++;
+        return tmp.request;
+    }
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status) {
+        if (time_count_++ > min_in_day_) {
+            requests_.pop_front();
+            --empty_requests_;
+        }
+        QueryResult tmp;
+        tmp.request = search_server_.FindTopDocuments(raw_query, status);
+        tmp.time_request = time_count_;
+        requests_.push_back(tmp);
+        if (tmp.request.empty())
+            empty_requests_++;
+        return tmp.request;
+    }
+    std::vector<Document> AddFindRequest(const std::string& raw_query) {
+        if (time_count_++ > min_in_day_) {
+            requests_.pop_front();
+            --empty_requests_;
+        }
+        QueryResult tmp;
+        tmp.request = search_server_.FindTopDocuments(raw_query);
+        tmp.time_request = time_count_;
+        requests_.push_back(tmp);
+        if (tmp.request.empty())
+            empty_requests_++;
+        return tmp.request;
+    }
+    int GetNoResultRequests() const {
+        return empty_requests_;
+    }
+private:
+    const SearchServer& search_server_;
+    struct QueryResult {
+        std::vector<Document> request;
+        int time_request = 0;
+    };
+    std::deque<QueryResult> requests_;
+    const static int min_in_day_ = 1440;
+    int time_count_ = 1;
+    int empty_requests_ = 0;
+    // возможно, здесь вам понадобится что-то ещё
+};
