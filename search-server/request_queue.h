@@ -14,47 +14,27 @@ public:
             requests_.pop_front();
             --empty_requests_;
         }
+        std::vector<Document> find_top_document = search_server_.FindTopDocuments(raw_query, document_predicate);
         QueryResult tmp;
-        tmp.request = search_server_.FindTopDocuments(raw_query, document_predicate);
+        tmp.request_success = !find_top_document.empty();
         tmp.time_request = time_count_;
         requests_.push_back(tmp);
-        if (tmp.request.empty())
+        if (!tmp.request_success) {
             empty_requests_++;
-        return tmp.request;
-    }
-    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status) {
-        if (time_count_++ > min_in_day_) {
-            requests_.pop_front();
-            --empty_requests_;
         }
-        QueryResult tmp;
-        tmp.request = search_server_.FindTopDocuments(raw_query, status);
-        tmp.time_request = time_count_;
-        requests_.push_back(tmp);
-        if (tmp.request.empty())
-            empty_requests_++;
-        return tmp.request;
+        return find_top_document;
     }
-    std::vector<Document> AddFindRequest(const std::string& raw_query) {
-        if (time_count_++ > min_in_day_) {
-            requests_.pop_front();
-            --empty_requests_;
-        }
-        QueryResult tmp;
-        tmp.request = search_server_.FindTopDocuments(raw_query);
-        tmp.time_request = time_count_;
-        requests_.push_back(tmp);
-        if (tmp.request.empty())
-            empty_requests_++;
-        return tmp.request;
-    }
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
+
+    std::vector<Document> AddFindRequest(const std::string& raw_query);
+
     int GetNoResultRequests() const {
         return empty_requests_;
     }
 private:
     const SearchServer& search_server_;
     struct QueryResult {
-        std::vector<Document> request;
+        bool request_success;
         int time_request = 0;
     };
     std::deque<QueryResult> requests_;

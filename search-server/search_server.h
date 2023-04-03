@@ -29,10 +29,6 @@ public:
             SplitIntoWords(stop_words_text)) // Invoke delegating constructor from std::string container
     {
     }
-    // шняга, неизвестного назначения
-    int GetDocumentId(int index) const;
-    // добавление документов
-    void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
     template <typename DocumentPredicate>
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentPredicate document_predicate) const
@@ -59,6 +55,12 @@ public:
         return matched_documents;
     }
 
+    // шняга, неизвестного назначения
+    int GetDocumentId(int index) const;
+    // добавление документов
+    void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+
+
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
@@ -70,6 +72,8 @@ public:
     {
         return documents_.size();
     }
+
+
 
 private:
     // структура, содержит средний райтинг докумета и его статус
@@ -112,6 +116,7 @@ private:
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
+    //Вы пишите "еще один шаблон", но я не совсем понял, что нужно сделать в данном случае...
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const
     {

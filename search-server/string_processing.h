@@ -7,6 +7,7 @@
 bool IsInvalidCharacter(const char character);
 // разбиение строки на вектор слов
 std::vector<std::string> SplitIntoWords(const std::string& text);
+
 // структура, хранящая id, релевантность и рейтинг документа
 template <typename StringContainer>
 std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings)
