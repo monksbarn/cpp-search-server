@@ -138,3 +138,7 @@ double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) con
 {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }
+bool SearchServer::IsStopWord(const std::string& word) const
+{
+    return stop_words_.count(word);
+}

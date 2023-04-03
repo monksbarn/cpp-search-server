@@ -81,17 +81,17 @@ private:
         int rating;
         DocumentStatus status;
     };
+
     // сет из стоп слов
     const std::set<std::string> stop_words_;
+
     // мэп: ключ - слово из документа, значение - мэп: ключ - id документа, значение TF для слова
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
+
     // мэп: ключ - id документа, значение - структура из рейтинга и статуса документа
     std::map<int, DocumentData> documents_;
     // определить принадлежность слова к списку стоп-слов
-    bool IsStopWord(const std::string& word) const
-    {
-        return stop_words_.count(word);
-    }
+    bool IsStopWord(const std::string& word) const;
     // разбить текст на слова, исключив из него стоп-слова
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
     // вычисление среднего рейтинга на основе переданного вектора рейтингов
@@ -116,7 +116,11 @@ private:
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
-    //Вы пишите "еще один шаблон", но я не совсем понял, что нужно сделать в данном случае...
+    //идите в жопу со своей "пачкой", это ВАШ курс и если я не понял, ЧТО нужно сделать, 
+    //нормально напишите, ЧТО нужно сделать или ЧТО я неправлиьно сделал,
+    //еще лучше, наишите как делать или что делать, чтобы правильно сделать...
+    //я все реализации вынес, кроме template
+    //что не так?
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const
     {
