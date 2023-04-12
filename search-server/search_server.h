@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -10,9 +11,11 @@
 #include "read_input_functions.h"
 #include "string_processing.h"
 #include "document.h"
+#include "log_duration.h"
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 #define COMPARISON_ERROR (1e-6)
+
 
 class SearchServer {
 public:
@@ -35,11 +38,20 @@ public:
     template <typename DocumentPredicate>
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentPredicate document_predicate) const;
 
-    // шняга, неизвестного назначения
-    int GetDocumentId(int index) const;
+    static void FindTopDocuments(const SearchServer& search_server, std::string raw_query);
+
+    std::set<int>::iterator begin() const;
+
+    std::set<int>::iterator end() const;
+
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
     // добавление документов
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+
+    static void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+    //remove docs
+    void RemoveDocument(int document_id);
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
@@ -64,9 +76,13 @@ private:
     // мэп: ключ - слово из документа, значение - мэп: ключ - id документа, значение TF для слова
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
 
+    std::map<int, std::map<std::string, double>> word_frequencies_;
+
+    std::map<std::string, double> empty_map_;
+
     // мэп: ключ - id документа, значение - структура из рейтинга и статуса документа
     std::map<int, DocumentData> documents_;
-
+    std::set<int> documents_id_;
     // определить принадлежность слова к списку стоп-слов
     bool IsStopWord(const std::string& word) const;
 
@@ -168,3 +184,5 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, Documen
     }
     return matched_documents;
 }
+
+
