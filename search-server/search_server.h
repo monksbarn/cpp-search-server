@@ -78,8 +78,6 @@ private:
 
     std::map<int, std::map<std::string, double>> word_frequencies_;
 
-    std::map<std::string, double> empty_map_;
-
     // мэп: ключ - id документа, значение - структура из рейтинга и статуса документа
     std::map<int, DocumentData> documents_;
     std::set<int> documents_id_;
