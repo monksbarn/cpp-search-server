@@ -37,10 +37,11 @@ void SearchServer::AddDocument(SearchServer& search_server, int document_id, con
 void SearchServer::RemoveDocument(int document_id) {
     documents_id_.erase(document_id);
     documents_.erase(document_id);
-    word_frequencies_.erase(document_id);
-    for (auto& [word, data] : word_to_document_freqs_) {
-        data.erase(document_id);
+    for (auto& [word, data] : word_frequencies_.at(document_id)) {
+        word_to_document_freqs_.at(word).erase(document_id);
     }
+    word_frequencies_.erase(document_id);
+
 }
 //сложность GetWordFrequencies должна быть O(log⁡N)O(logN);
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
