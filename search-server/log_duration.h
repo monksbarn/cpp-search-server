@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <string_view>
 #include <chrono>
 #include <iostream>
 
@@ -15,8 +16,8 @@ public:
     // с помощью using для удобства
     using Clock = std::chrono::steady_clock;
     LogDuration() = default;
-    LogDuration(const std::string& msg);
-    LogDuration(const std::string& msg, std::ostream& out);
+    LogDuration(const std::string_view& msg);
+    LogDuration(const std::string_view& msg, std::ostream& out);
 
     ~LogDuration();
 

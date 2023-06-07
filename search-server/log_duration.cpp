@@ -1,8 +1,8 @@
 #include "log_duration.h"
 
-LogDuration::LogDuration(const std::string& msg):msg_(msg) {
+LogDuration::LogDuration(const std::string_view& msg) :msg_(msg) {
 }
-LogDuration::LogDuration(const std::string& msg, std::ostream& out):msg_(msg) {
+LogDuration::LogDuration(const std::string_view& msg, std::ostream& out) :msg_(msg) {
     out << std::endl;
 }
 LogDuration::~LogDuration() {
