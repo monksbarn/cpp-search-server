@@ -184,21 +184,9 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
     return std::tuple{matched_words, documents_.at(document_id).status};
 }
 
-// В метод MatchDocument может быть передан некорректный поисковый запрос — в этом случае должно быть выброшено исключение std::invalid_argument.
-// Если передан несуществующий document_id, ожидается исключение std::out_of_range.
-
 int SearchServer::ComputeAverageRating(const std::vector<int>& ratings)
 {
-    if (ratings.empty())
-    {
-        return 0;
-    }
-    int rating_sum = 0;
-    for (const int rating : ratings)
-    {
-        rating_sum += rating;
-    }
-    return rating_sum / static_cast<int>(ratings.size());
+    return ratings.empty() ? 0 : std::accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
 }
 
 std::vector<std::string_view> SearchServer::SplitIntoWordsNoStop(const std::string_view text) const
