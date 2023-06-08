@@ -190,6 +190,8 @@ private://=========================================SEARCH_SERVER_PRIVATE========
 
     template <typename ExecutionPolicy, typename DocumentPredicate, typename QueryType>
     std::vector<Document> FindAllDocuments(const ExecutionPolicy& policy, QueryType& query, DocumentPredicate document_predicate) const;
+
+    void MatchedDocumentProcessing(std::vector<Document>& matched_documents) const;
 };
 
 //============================================TEMPLATE_DEFINITION=======================================================
@@ -241,8 +243,8 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
     if (std::is_same_v <ExecutionPolicy, std::execution::sequenced_policy>) {
         return FindAllDocuments(query, document_predicate);
     }
-
-    ConcurrentMap<int, double> doc_to_relevance_backet(100);
+    const size_t BACKETS_COUNT = 100;
+    ConcurrentMap<int, double> doc_to_relevance_backet(BACKETS_COUNT);
     for_each(std::execution::par, query.plus_words.begin(), query.plus_words.end(), [&](const auto& word) {
         if (word_to_document_freqs_.count(word))
         {
@@ -283,22 +285,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_
 {
     Query query = ParseQuery(raw_query);
     auto matched_documents = FindAllDocuments(query, document_predicate);
-    std::sort(matched_documents.begin(), matched_documents.end(),
-        [](const Document& lhs, const Document& rhs)
-        {
-            if (std::abs(lhs.relevance - rhs.relevance) < COMPARISON_ERROR)
-            {
-                return lhs.rating > rhs.rating;
-            }
-            else
-            {
-                return lhs.relevance > rhs.relevance;
-            }
-        });
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT)
-    {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
+    MatchedDocumentProcessing(matched_documents);
     return matched_documents;
 }
 
@@ -311,23 +298,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const ExecutionPolicy& poli
 
     QueryParallel query = ParseQuery(std::execution::par, raw_query);
     auto matched_documents = FindAllDocuments(std::execution::par, query, document_predicate);
-    std::sort(matched_documents.begin(), matched_documents.end(),
-        [](const Document& lhs, const Document& rhs)
-        {
-            if (std::abs(lhs.relevance - rhs.relevance) < COMPARISON_ERROR)
-            {
-                return lhs.rating > rhs.rating;
-            }
-            else
-            {
-                return lhs.relevance > rhs.relevance;
-            }
-        });
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT)
-    {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
+    MatchedDocumentProcessing(matched_documents);
     return matched_documents;
 }
-
 

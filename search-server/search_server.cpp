@@ -255,3 +255,22 @@ bool SearchServer::IsStopWord(const std::string_view word) const
 {
     return stop_words_.count(word);
 }
+
+void SearchServer::MatchedDocumentProcessing(std::vector<Document>& matched_documents) const {
+    std::sort(matched_documents.begin(), matched_documents.end(),
+        [](const Document& lhs, const Document& rhs)
+        {
+            if (std::abs(lhs.relevance - rhs.relevance) < COMPARISON_ERROR)
+            {
+                return lhs.rating > rhs.rating;
+            }
+            else
+            {
+                return lhs.relevance > rhs.relevance;
+            }
+        });
+    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT)
+    {
+        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+    }
+}
